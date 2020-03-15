@@ -56,18 +56,18 @@ rand.bin:
 
 data.feather: columns.txt
 	echo 'Generating data from list of columns...'
-	python3 generate_data.py --columns $^ --data $@
+	python3 generate_data.py --columns $^ --data $@ --min_rows=4096
 
-# note R packages are installed relative to R in the active env
+# R packages are installed relative to R in the active env
 # a minimal conda env works: conda create -n local_R r-base 
 setup: 
 	# install numpy and R then make setup
-	pip3 install -U patsy pandas feather-format scikit-sparse scipy
+	pip3 install -U patsy pandas feather-format scikit-sparse scipy py-bobyqa
 	MAKE='make -j' Rscript -e 'install.packages(c("lme4", "optparse", "feather"), repos="cloud.r-project.org")'
 
 setup_jupyter:
 	# optional ... 
-	pip3 install -U --no-cache-dir rpy2 jupyter 
+	pip3 install -U --no-cache-dir rpy2 jupyter timer
 	MAKE='make -j' Rscript -e 'install.packages(c("IRkernel", "dplyr"), repos="cloud.r-project.org")'
 
 conda_env_setup: 

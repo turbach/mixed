@@ -1,4 +1,5 @@
 import argparse
+import time
 import mixed
 import numpy as np
 import pandas as pd
@@ -122,6 +123,8 @@ npt=min(2*n, n+2)
 rhobeg=min(0.95, 0.2 * np.max(np.abs(theta0)))
 rhoend=1e-6 * rhobeg
 
+print("Starting pybobyqa.solve()")
+start = time.time()
 soln = pybobyqa.solve(
     devfun,
     theta0,
@@ -130,4 +133,6 @@ soln = pybobyqa.solve(
     rhobeg=rhobeg,
     rhoend=rhoend
 )
+stop=time.time()
+print(f"Elapsed: {(stop - start)/60.:.2f}")
 print(soln)
