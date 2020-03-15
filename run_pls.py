@@ -85,7 +85,12 @@ def pls(X, y, Z, Lambdat, thfun):
 
         b = Lambdat.T @ u
 
+        # import pdb; pdb.set_trace()
         mu = Z.T@b + X@beta + offset
+
+        # pls.R:178  mu[] <<- as.vector(crossprod(Zt,b) + X %*% beta + offset)
+        # from R docs ... X %*% beta == crossprod(t(X) %*% beta)
+        # ?? mu = Z.T@b + X.T@beta + offset
 
         # remember to do this in sparse mode
         wtres = Whalf * (y-mu)

@@ -58,8 +58,20 @@ data.feather: columns.txt
 	echo 'Generating data from list of columns...'
 	python3 generate_data.py --columns $^ --data $@
 
-setup:
+setup: 
+	pip3 install -U numpy
 	pip3 install -U patsy pandas feather-format scikit-sparse scipy
+	MAKE='make -j' Rscript -e 'install.packages(c("lme4", "optparse", "feather"), repos="cloud.r-project.org")'
+
+conda_env_setup: 
+	# run this in a bare conda env of your choice like so ... 
+	# > conda create -n mixed python pip -y
+	# > conda activate mixed
+	# > make conda_env_setup
+	pip install -U py-bobyqa
+	conda install numpy patsy pandas feather-format scikit-sparse scipy r-base \  # obligatory
+	              rpy2 r-essentials r-tidyverse r-irkernel jupyter \  # optional, drop if unwanted
+	              -c defaults -c conda-forge -y
 	MAKE='make -j' Rscript -e 'install.packages(c("lme4", "optparse", "feather"), repos="cloud.r-project.org")'
 
 clean:
