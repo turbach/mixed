@@ -58,10 +58,17 @@ data.feather: columns.txt
 	echo 'Generating data from list of columns...'
 	python3 generate_data.py --columns $^ --data $@
 
+# note R packages are installed relative to R in the active env
+# a minimal conda env works: conda create -n local_R r-base 
 setup: 
-	pip3 install -U numpy
+	# install numpy and R then make setup
 	pip3 install -U patsy pandas feather-format scikit-sparse scipy
 	MAKE='make -j' Rscript -e 'install.packages(c("lme4", "optparse", "feather"), repos="cloud.r-project.org")'
+
+setup_jupyter:
+	# optional ... 
+	pip3 install -U --no-cache-dir rpy2 jupyter 
+	MAKE='make -j' Rscript -e 'install.packages(c("IRkernel", "dplyr"), repos="cloud.r-project.org")'
 
 conda_env_setup: 
 	# run this in a bare conda env of your choice like so ... 
@@ -73,6 +80,8 @@ conda_env_setup:
 	              rpy2 r-essentials r-tidyverse r-irkernel jupyter \  # optional, drop if unwanted
 	              -c defaults -c conda-forge -y
 	MAKE='make -j' Rscript -e 'install.packages(c("lme4", "optparse", "feather"), repos="cloud.r-project.org")'
+	echo "# conda_env_setup $(date)" > conda_env.yml
+	conda env export >> conda_env.yml
 
 clean:
 	rm -rf $(wildcard *.feather *.bin __pycache__)
