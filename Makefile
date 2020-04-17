@@ -7,6 +7,7 @@ DMATRICES_PY = $(addsuffix -py.bin, $(DMATRICES))
 FMATRICES_R  = $(addsuffix -r.bin,  $(FMATRICES))
 FMATRICES_PY = $(addsuffix -py.bin, $(FMATRICES))
 
+
 # we can get -0 vs +0, so binary comparison won't work here
 define cmp
 echo 'Comparing $1 in Python and R...'
@@ -61,27 +62,35 @@ data.feather: columns.txt
 # R packages are installed relative to R in the active env
 # a minimal conda env works: conda create -n local_R r-base 
 setup: 
-	# install numpy and R then make setup
 	pip3 install -U patsy pandas feather-format scikit-sparse scipy py-bobyqa
 	MAKE='make -j' Rscript -e 'install.packages(c("lme4", "optparse", "feather"), repos="cloud.r-project.org")'
 
-setup_jupyter:
-	# optional ... 
-	pip3 install -U --no-cache-dir rpy2 jupyter timer
-	MAKE='make -j' Rscript -e 'install.packages(c("IRkernel", "dplyr"), repos="cloud.r-project.org")'
+# Create a conda env to run mixed with CUDA and numba support. Spoiler alert: the
+# order of conda package installation is brittle b.c. of dependencies ...
+#   * install conda-build early or fail
+#   * install CUDA first and separately before r-base, else an
+#     LD_LIBRARY_PATH fight erupts and CUDA nvcc breaks.
+#   * py-bobyqa capitalization-fluid naming is critical. Uppercase for
+#     PyPI or the tarball in meta.yaml is misnamed.  lowercase for
+#     conda-build or else the package is not found.
 
-conda_env_setup: 
-	# run this in a bare conda env of your choice like so ... 
-	# > conda create -n mixed python pip -y
-	# > conda activate mixed
-	# > make conda_env_setup
-	pip install -U py-bobyqa
-	conda install numpy patsy pandas feather-format scikit-sparse scipy r-base \  # obligatory
-	              rpy2 r-essentials r-tidyverse r-irkernel jupyter \  # optional, drop if unwanted
-	              -c defaults -c conda-forge -y
-	MAKE='make -j' Rscript -e 'install.packages(c("lme4", "optparse", "feather"), repos="cloud.r-project.org")'
-	echo "# conda_env_setup $(date)" > conda_env.yml
-	conda env export >> conda_env.yml
+CONDA_ENV = mixed_cuda
+setup_conda: 
+	{ \
+	. $$(conda info --base)/etc/profile.d/conda.sh; \
+	conda create -n ${CONDA_ENV}; \
+	conda activate ${CONDA_ENV}; \
+	hash -r; \
+	conda info -e | grep "*" ; \
+	conda install python pip cudatoolkit-dev numba conda-build -c defaults -c conda-forge -y; \
+	conda install patsy feather-format scikit-sparse -c defaults -c conda-forge -y; \
+	rm -rf /tmp/py-bobyqa; \
+	conda skeleton pypi Py-BOBYQA --output-dir /tmp/py-bobyqa; \
+	conda-build /tmp/py-bobyqa; \
+	conda install -c file://$${CONDA_PREFIX}/conda-bld py-bobyqa -y; \
+	conda install r-base -y ; \
+	MAKE='make -j' Rscript -e 'install.packages(c("lme4", "optparse", "feather"), repos="cloud.r-project.org")'; \
+	}
 
 clean:
 	rm -rf $(wildcard *.feather *.bin __pycache__)
